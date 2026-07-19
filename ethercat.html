@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ethercat config</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page">
+      <nav class="sidebar" aria-label="Quick links">
+        <div class="logo"><img src="images/1334524241_308659_logo_high.0.png" alt="CNC-FORM logo" /></div>
+        <a href="home.html">Home</a>
+        <a href="virtual_machine.html">Virtual machine</a>
+        <a href="services.html">Services</a>
+        <a href="ethercat.html">Ethercat config</a>
+        <a href="contact.html">Contact</a>
+        <div class="sidebar-footer">© 2026 CNC-FORM</div>
+      </nav>
+
+      <div class="content">
+        <h1>Ethercat config</h1>
+        <p style="font-size: 1.15rem; font-weight: 700; line-height: 1.5">
+          1. From LinuxCNC 2.9.8 Debian 13 Installation via EtherCat Master to the First Motor Movement
+        </p>
+
+        <div class="accordion">
+          <details>
+            <summary>1. LinuxCNC Installation</summary>
+            <p>
+              1.1 The installation applies to LinuxCNC 2.9.8 Debian 13 Trixie.<br />
+              Download the image:<br />
+              <a href="https://www.linuxcnc.org/iso/linuxcnc_2.9.8-amd64.hybrid.iso" target="_blank" rel="noopener noreferrer"
+                >https://www.linuxcnc.org/iso/linuxcnc_2.9.8-amd64.hybrid.iso</a
+              ><br />
+              Mount the ISO to a pendrive, e.g., using the Rufus program.
+            </p>
+            <p>1.2 If Linux will be a second system, you can first create unallocated space on the disk in Windows:</p>
+            <p>
+              Press Win + X and select Disk Management.<br />
+              Shrink the partition (if you want to keep data).<br />
+              In the Disk Management window, find the partition you want to shrink.<br />
+              Right-click it and select Shrink Volume.<br />
+              Enter by how many MB you want to shrink the partition.<br />
+              That much space will become unallocated.<br />
+              Click Shrink.
+            </p>
+            <p>
+              1.3 Change the boot order in BIOS to set the pendrive as first.<br />
+              After booting from the pendrive, select install LinuxCNC.<br />
+              Manual disk selection.<br />
+              Partition selection: one EFI system partition is required, a swap partition of 4–16 GB, and an ext4 partition with
+              the mount point /.<br />
+              Use as: EFI system partition.<br />
+              Use as: swap partition 4–16 GB.<br />
+              Use as: ext4 partition with mount point /.
+            </p>
+            <p>
+              *If you have a Legacy BIOS, the system installs using the disk's MBR, and no EFI partition is created.<br />
+              *If the EFI partition already exists, select use as system partition and do not format.<br />
+              *The EFI partition must contain a Debian entry for the system to boot from the disk.
+            </p>
+            <p>
+              1.4 If GRUB does not want to install, choose Finish without a bootloader.<br />
+              However, in this situation, leave the pendrive so that Linux can boot again.<br />
+              And select at the top: Live System.
+            </p>
+            <p>
+              For BIOS UEFI:<br />
+              To install GRUB via the Internet.
+            </p>
+            <p>
+              1.5 In Live Linux, connect to the Internet via the toolbar.
+              <br />
+              <img
+                src="images/toolbar.png"
+                alt="Toolbar in Linux"
+                style="max-width: 100%; margin-top: 10px; border: 1px solid #ccc"
+              />
+            </p>
+            <p>
+              1.6 Mounting and operating on system partitions to add an entry to EFI.<br />
+              Check the partitions:<br />
+              <code>lsblk -f</code>
+              <br />
+              <img
+                src="images/terminal.png"
+                alt="Terminal command example"
+                style="max-width: 100%; margin-top: 10px; border: 1px solid #ccc"
+              />
+            </p>
+            <p>
+              Mount the EFI partition and the /ext4 partition by their names, in this case:<br />
+              <code>sudo mkdir -p /mnt</code><br />
+              <code>sudo mount /dev/nvme0n1p7 /mnt/</code> Partition /EXT4<br />
+              <code>sudo mkdir -p /mnt/boot/efi</code><br />
+              <code>sudo mount /dev/nvme0n1p1 /mnt/boot/efi</code> Partition EFI<br /><br />
+              Mount the system directories in order:<br />
+              <code>sudo mount --bind /dev /mnt/dev</code><br />
+              <code>sudo mount --bind /proc /mnt/proc</code><br />
+              <code>sudo mount --bind /sys /mnt/sys</code><br />
+              <code>sudo mount --bind /run /mnt/run</code><br /><br />
+              Bind internet to partitions:<br />
+              <code>sudo mkdir -p /mnt/etc</code><br />
+              <code>sudo mount --bind /etc/resolv.conf /mnt/etc/resolv.conf</code><br />
+              Check internet:<br />
+              <code>ping -c 3 deb.debian.org</code><br /><br />
+              Now GRUB installation:<br />
+              Enter Debian (ch root)<br />
+              <code>sudo chroot /mnt</code><br />
+              The prompt should appear as: <code>root@debian:/#</code><br /><br />
+              Install GRUB<br />
+              <code>apt update</code><br />
+              <code>apt install grub-efi-amd64 efibootmgr</code><br /><br />
+              Install GRUB to EFI:<br />
+              <code>grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=Debian</code><br /><br />
+              Optional, Generate the menu<br />
+              <code>update-grub</code><br /><br />
+              Exit and clean up<br />
+              <code>exit</code><br />
+              <code>sudo umount -R /mnt</code><br />
+              <code>reboot</code><br /><br />
+              Now the entry in EFI (/boot/efi/EFI/Debian/) has already been created, Linux will boot normally.<br />
+              End of installation – remove the pendrive; at startup, you can access the boot manager by pressing, e.g., F7,
+              depending on the BIOS.<br /><br />
+              *If it's a Legacy BIOS, the commands are as follows:<br />
+              Mount the / partition (EXT4) by its device name, in this case:<br />
+              <code>sudo mkdir -p /mnt</code><br />
+              <code>sudo mount /dev/nvme0n1p7 /mnt</code><br /><br />
+              Bind the system directories one by one:<br />
+              <code>sudo mount --bind /dev /mnt/dev</code><br />
+              <code>sudo mount --bind /proc /mnt/proc</code><br />
+              <code>sudo mount --bind /sys /mnt/sys</code><br />
+              <code>sudo mount --bind /run /mnt/run</code><br /><br />
+              Bind internet to partition:<br />
+              <code>sudo mkdir -p /mnt/etc</code><br />
+              <code>sudo mount --bind /etc/resolv.conf /mnt/etc/resolv.conf</code><br /><br />
+              Enter Debian (ch root)<br />
+              <code>sudo chroot /mnt</code><br /><br />
+              Install GRUB to the MBR of the entire disk (replace nvme0n1 with your disk's device name):<br />
+              <code>apt update && apt install -y grub-pc && grub-install /dev/nvme0n1 && update-grub</code><br /><br />
+              Optionally, regenerate the GRUB menu:<br />
+              <code>update-grub</code><br />
+              Exit and clean up<br />
+              <code>exit</code><br />
+              <code>sudo umount -R /mnt</code><br />
+              <code>reboot</code>
+            </p>
+          </details>
+          <details>
+            <summary>2. Preparing the System for EtherCAT</summary>
+            <p>
+              2.1 Start the system<br /><br />
+              2.2 Network card configuration<br />
+              Click on the network settings in the top right corner.<br />
+              Change the first 2 tabs, disable the rest<br /><br />
+              <img
+                src="images/b2.2.png"
+                alt="Network settings step 2"
+                style="max-width: 100%; margin-top: 10px; border: 1px solid #ccc"
+              />
+              <br /><br />
+              <img
+                src="images/b2.3.png"
+                alt="Network settings step 3"
+                style="max-width: 100%; margin-top: 10px; border: 1px solid #ccc"
+              />
+            </p>
+            <p>
+              2.3 Disable NETWORKMANAGER for the network card so that EtherCAT has exclusive access.<br />
+              Find the name of the card:<br />
+              <code>ip link</code><br /><br />
+              <img
+                src="images/b2.1.png"
+                alt="Network card information"
+                style="max-width: 100%; margin-top: 10px; border: 1px solid #ccc"
+              />
+              <br /><br />
+              Disable the Manager, replace enp3s0 with your own card name:<br />
+              <code>sudo nmcli device set enp3s0 managed no</code><br />
+              Check if it has been unmanaged:<br />
+              <code>nmcli device status</code>
+            </p>
+            <p>
+              2.4 System update<br />
+              <code>sudo apt update</code><br />
+              <code>sudo apt upgrade</code><br />
+              Continue? [Y/n] y
+            </p>
+            <p>
+              2.5 Git installation<br />
+              <code>sudo apt update</code><br />
+              <code>sudo apt install git</code><br />
+              <code>git --version</code>
+            </p>
+          </details>
+          <details>
+            <summary>3. EtherCAT Master Installation</summary>
+            <p>
+              Preparing the system for EtherCAT<br /><br />
+              <code>sudo apt update</code><br />
+              <code>sudo apt install linuxcnc-ethercat</code><br /><br />
+              3.1 Check the MAC address of the network card<br />
+              <code>ip a</code><br />
+              Then fill in<br />
+              <code>sudo geany /etc/ethercat.conf</code><br /><br />
+              <code>MASTER0_DEVICE="................"</code><br />
+              <code>DEVICE_MODULES="generic"</code><br /><br />
+              And save and close.<br /><br />
+              3.2 First EtherCAT startup, step by step:<br />
+              <code>sudo systemctl enable ethercat.service</code><br />
+              <code>sudo systemctl start ethercat.service</code><br />
+              <code>sudo systemctl status ethercat.service</code><br />
+              <code>sudo chmod 666 /dev/EtherCAT0</code><br /><br />
+              3.3 Grant permission for EtherCAT Master at system startup<br />
+              <code>sudo geany /etc/udev/rules.d/99-ethercat.rules</code><br />
+              Paste:<br />
+              <code>KERNEL=="EtherCAT[0-9]", MODE="0777"</code><br />
+              Save and close.<br />
+              Then type<br />
+              <code>sudo udevadm control --reload-rules</code><br />
+              Restart the computer
+            </p>
+          </details>
+          <details>
+            <summary>4. Connecting servo drives</summary>
+            <p>
+              At this stage, you can connect the EK1100 and the servo drivers to power, connect to the network card:<br /><br />
+              Reset any errors on the servo drivers if they occur, according to the user manual.<br />
+              Then check:<br />
+              <code>sudo ethercat master</code><br />
+              <code>sudo ethercat slaves</code><br />
+              <code>uname -a</code><br />
+              <code>latency-histogram</code><br /><br />
+              <img
+                src="images/b4.2.png"
+                alt="EtherCAT servo drive connection check"
+                style="max-width: 100%; margin-top: 10px; border: 1px solid #ccc"
+              />
+              <br /><br />
+              After testing:<br />
+              If the servo drivers are in the PREOP state, you can de-energize them:<br />
+              <code>sudo ethercat states INIT</code><br />
+              and turn off the power
+            </p>
+          </details>
+          <details>
+            <summary>5. Connecting network card to EtherCAT master</summary>
+            <p>
+              The network card can be connected to the EtherCAT master if it is recognized by it.<br />
+              Supported cards are mainly Intel with the igb, igc, 1000, or 1000e driver.<br />
+              This ensures greater compatibility with real-time operations and allows the card to work exclusively under the
+              control of EtherCAT.<br /><br />
+              Checking the type of network card driver in the Kernel.<br />
+              <code>sudo apt update</code><br />
+              <code>sudo apt install ethtool</code><br />
+              Find the name of your card<br />
+              <code>ip a</code><br /><br />
+              <img
+                src="images/b.7.1.png"
+                alt="Network card identification"
+                style="max-width: 100%; margin-top: 10px; border: 1px solid #ccc"
+              />
+              <br /><br />
+              and replace the name enp3s0 with your own<br />
+              <code>sudo ethtool -i enp3s0</code><br />
+              Network card model<br />
+              <code>lspci -nn | grep -i ethernet</code><br /><br />
+              <img
+                src="images/b7.2.png"
+                alt="Network card model check"
+                style="max-width: 100%; margin-top: 10px; border: 1px solid #ccc"
+              />
+              <br /><br />
+              If the network card driver is named igb, igc, 1000, 1000e, or any of the others listed in ethercat.conf, we will try
+              to connect it to the master instead of using the generic mode.<br />
+              <code>sudo geany /etc/ethercat.conf</code><br /><br />
+              In this case, replace generic with:<br />
+              <code>DEVICE_MODULES="igb"</code><br /><br />
+              Save and close<br />
+              <code>sudo systemctl stop ethercat</code><br />
+              <code>sudo systemctl start ethercat</code><br /><br />
+              We check whether the card is Native/attached<br />
+              <img
+                src="images/b7.3.png"
+                alt="EtherCAT native attachment check"
+                style="max-width: 100%; margin-top: 10px; border: 1px solid #ccc"
+              />
+              <br /><br />
+              If not, return to ethercat.conf and save generic again.
+            </p>
+          </details>
+          <details>
+            <summary>6. Cia402.comp Installation</summary>
+            <p>
+              <code>mkdir -p ~/dev</code><br />
+              <code>cd ~/dev</code><br />
+              <code>git clone https://github.com/dbraun1981/hal-cia402</code><br />
+              <code>cd hal-cia402</code><br />
+              <code>sudo halcompile --install cia402.comp</code>
+            </p>
+          </details>
+          <details>
+            <summary>7. Custom Homing Installation</summary>
+            <p>
+              Install LinuxCNC source repositories<br />
+              <code>git clone https://github.com/LinuxCNC/linuxcnc.git linuxcnc-dev</code><br /><br />
+              Then copy homecomp:<br />
+              <code>cd ~/dev</code><br />
+              <code>git clone https://github.com/rodw-au/cia402_homecomp</code><br /><br />
+              5.1 Now you need to replace one line.<br />
+              Without terminal, browse through the folders and find this file:<br />
+              <code>/home/..../linuxcnc-dev/src/emc/motion/homing.c</code><br />
+              And copy its exact path.<br /><br />
+              Then enter the folder <code>/home/dev/cia402_homecomp</code>.<br /><br />
+              <img
+                src="images/b5.1.png"
+                alt="Custom homing component setup"
+                style="max-width: 100%; margin-top: 10px; border: 1px solid #ccc"
+              />
+              <br /><br />
+              Open the file <code>cia402_homecomp.comp</code>.<br />
+              Find this line and replace it with your own path:<br />
+              <code>#define HOMING_BASE home/..../linuxcnc-dev/src/emc/motion/homing.c</code><br />
+              and save.<br /><br />
+              Open a new terminal and enter:<br />
+              <code>cd ~/dev/cia402_homecomp</code><br /><br />
+              <code>sudo halcompile --install cia402_homecomp.comp</code><br /><br />
+              At a later stage, make sure that such an entry exists in the INI file:<br />
+              <code>[EMCMOT]</code><br />
+              <code>HOMEMOD = cia402_homecomp</code><br /><br />
+              End<br />
+              At this stage, all necessary components have been installed.
+            </p>
+          </details>
+          <details>
+            <summary>8. Starting LinuxCNC GUI</summary>
+            <p>
+              Start LinuxCNC from the terminal:<br />
+              <code>linuxcnc</code><br /><br />
+              Open the simulation, for example <strong>SIM Axis</strong>. This creates the folders where you can copy your
+              configuration.<br /><br />
+              Close the simulation after the folders have been generated.<br /><br />
+              Create your own configuration using generators, or copy a ready-made one for Lichuan LC-E servos, for example from
+              my GitHub:<br />
+              <a
+                href="https://github.com/szolkaa/Automatic-linuxcnc-config-generators-for-ethercat"
+                target="_blank"
+                rel="noopener noreferrer"
+                >https://github.com/szolkaa/Automatic-linuxcnc-config-generators-for-ethercat</a
+              ><br /><br />
+              Enter the folder <code>linuxcnc/config/</code> and paste the complete configuration folder containing the
+              <code>hal</code>, <code>ini</code>, and <code>xml</code> files there.<br /><br />
+              Before the first LinuxCNC startup, you can check whether the shared memory segments are clean to avoid errors such
+              as:<br />
+              <code>rtapi_shmem_new failed due to shmget(key=0xacb572c7): Invalid argument</code><br />
+              <code>lcec_conf: ERROR: couldn't allocate user/RT shared memory</code><br /><br />
+              Check shared memory segments:<br />
+              <code>ipcs -m</code><br /><br />
+              If any entry shows a locked status, remove it with the number from the <code>shmid</code> column:<br />
+              <code>sudo ipcrm -m 32812</code><br /><br />
+              <img
+                src="images/b6.2.png"
+                alt="LinuxCNC shared memory check"
+                style="max-width: 100%; margin-top: 10px; border: 1px solid #ccc"
+              />
+              <br /><br />
+              Restart the computer.<br /><br />
+              Now start LinuxCNC again:<br />
+              <code>linuxcnc</code><br /><br />
+              Choose a configuration.<br /><br />
+              After the program starts, you can connect the Ethernet cable and power on the servos.
+              <br /><br />
+              <img
+                src="images/b6.png"
+                alt="LinuxCNC startup screen"
+                style="max-width: 100%; margin-top: 10px; border: 1px solid #ccc"
+              />
+            </p>
+          </details>
+          <details>
+            <summary>9. Machine Coordinate System (MCS)</summary>
+            <p>
+              In the custom homing component configuration, the Machine Coordinate System (MCS, G53) is established and based on
+              the value 0 of each absolute encoder in the motor. When two motors operate together in the same plane, before homing
+              in jog mode they should be set to the same encoder position—preferably each at 0.00—because the second motor Y2 will
+              try to drastically align its position with the first Y. Only after that should Home Axis be activated.
+            </p>
+            <p>
+              It should also be remembered not to operate without Home Axis, because the soft limits are disabled and it is
+              possible to move beyond the allowed area up to the first physical obstacle. Jog mode without Home Axis is intended
+              only for safely retracting, for example, a tool from the material workspace.
+            </p>
+            <p>Before installing the motors, homing to 0 or resetting the absolute encoder to 0 must be performed.</p>
+            <p>
+              Open the MDI tab <code>[F5]</code> and enter:<br />
+              <code>G53 G0 Z0</code><br />
+              then:<br />
+              <code>G53 G0 X0 Y0</code><br />
+              or:<br />
+              <code>G53 G0 X0 Y0 Z0</code>
+            </p>
+            <p>
+              The easiest way is to reset the absolute encoder position directly in the servo drive settings according to the
+              manual, or turn the nut on the screw close to one end, and when the encoder is at position 0, connect the ball screw
+              to the motor.
+            </p>
+            <p>
+              Set the HAL file resolution and the desired movement direction of the screw by adding <code>-</code> to each joint,
+              for example:<br />
+              <code>setp cia402.0.pos-scale 1677721.6</code><br />
+              or:<br />
+              <code>setp cia402.0.pos-scale -1677721.6</code>
+            </p>
+            <p>
+              Then measure how much safe travel remains to the end of the screw and set these values in the INI file, depending on
+              the direction of the screw, for example:<br />
+              <code>MIN_LIMIT = -1</code><br />
+              <code>MAX_LIMIT = 545</code>
+            </p>
+          </details>
+          <details>
+            <summary>10. Work Coordinate System (WCS)</summary>
+            <p>
+              The same WCS, G54, is a work coordinate system set relative to the workpiece. It allows you to define the workpiece
+              zero point (0,0,0) and perform tool movements relative to it. The same point is defined in the CAM program; usually,
+              the corner, center, or a hole on the top surface of the raw material is chosen.
+            </p>
+            <p>
+              The basic method for defining the workpiece zero point is to directly position the tool tip in the X and Y planes
+              above the physical material at the location specified in the CAM program, and then move the Z axis downward.
+              Sometimes a small gap between the tool and the surface is used, for example using a sheet of paper, and the paper
+              thickness is taken into account during the touch off.
+            </p>
+            <p>
+              For each axis, select <strong>Touch Off P1 (G54)=0</strong>. This assigns the current XYZ axis positions to the WCS.
+            </p>
+            <img
+              src="images/wcs.png"
+              alt="Work coordinate system touch off screen"
+              style="max-width: 100%; margin-top: 10px; border: 1px solid #ccc"
+            />
+          </details>
+        </div>
+      </div>
+      <div class="page-bottom-text">Linux CNC Configurations</div>
+    </div>
+  </body>
+</html>
