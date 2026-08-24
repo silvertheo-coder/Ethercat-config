@@ -445,5 +445,23 @@
       </div>
       <div class="page-bottom-text">Linux CNC Configurations</div>
     </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const items = document.querySelectorAll('.accordion > details')
+
+        items.forEach((item) => {
+          item.addEventListener('toggle', () => {
+            if (!item.open) return
+
+            items.forEach((otherItem) => {
+              if (otherItem !== item) {
+                otherItem.open = false
+              }
+            })
+          })
+        })
+      })
+    </script>
   </body>
 </html>
